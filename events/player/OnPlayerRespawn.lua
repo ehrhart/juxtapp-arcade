@@ -1,0 +1,3 @@
+function OnPlayerRespawn(player)
+
+end

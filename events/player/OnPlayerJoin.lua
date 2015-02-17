@@ -1,0 +1,3 @@
+function OnPlayerJoin(player)
+
+end

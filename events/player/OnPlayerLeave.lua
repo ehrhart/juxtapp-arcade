@@ -1,0 +1,3 @@
+function OnPlayerLeave(player)
+
+end
