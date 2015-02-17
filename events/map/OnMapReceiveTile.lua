@@ -1,3 +1,3 @@
 function OnMapReceiveTile(player, x, y, tile)
-	return 1
+	return player:HasFeature("view_rcon") and 1 or 0
 end
