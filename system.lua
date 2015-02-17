@@ -12,30 +12,16 @@ function Computer:init(x, y)
 	
 	local screenWidth, screenHeight = 32, 16
 	self.screen = {
+		x = self.x,
+		y = self.y - screenHeight,
 		width = screenWidth,
 		height = screenHeight,
-		topLeft = {
-			x = self.x,
-			y = self.y - screenHeight,
-		},
-		topRight = {
-			x = self.x + screenWidth,
-			y = self.y - screenHeight,
-		},
-		bottomLeft = {
-			x = self.x,
-			y = self.y,
-		},
-		bottomRight = {
-			x = self.x + screenWidth,
-			y = self.y,
-		}
 	}
 	
-	local gamepadWidth, gamepadHeight = 1, 1
+	local gamepadWidth, gamepadHeight = 2, 2
 	self.gamepad = {
 		x = self.x + math.floor(self.screen.width/2)-math.ceil(gamepadWidth/2),
-		y = self.y + 2,
+		y = self.y + 1,
 		width = gamepadWidth,
 		height = gamepadHeight,
 	}
@@ -43,17 +29,18 @@ end
 
 function Computer:Boot()
 	-- Draw screen border
-	DrawRectangle(self.screen.topLeft.x-1, self.screen.topLeft.y-1, self.screen.topRight.x+1, self.screen.topRight.y-1, Blocks.CASTLE_WALL)
-	DrawRectangle(self.screen.topLeft.x-1, self.screen.topLeft.y-1, self.screen.bottomLeft.x-1, self.screen.bottomLeft.y+1, Blocks.CASTLE_WALL)
-	DrawRectangle(self.screen.topRight.x+1, self.screen.topRight.y-1, self.screen.bottomRight.x+1, self.screen.bottomRight.y+1, Blocks.CASTLE_WALL)
-	DrawRectangle(self.screen.bottomLeft.x-1, self.screen.bottomLeft.y+1, self.screen.bottomRight.x+1, self.screen.bottomRight.y+1, Blocks.CASTLE_WALL)
+	DrawRectangle(self.screen.x-1, self.screen.y-1, self.screen.x + self.screen.width, self.screen.y-1, Blocks.CASTLE_WALL) -- top
+	DrawRectangle(self.screen.x-1, self.screen.y + self.screen.height, self.screen.x + self.screen.width, self.screen.y + self.screen.height, Blocks.CASTLE_WALL) -- bottom
+	DrawRectangle(self.screen.x-1, self.screen.y-1, self.screen.x-1, self.screen.y + self.screen.height, Blocks.CASTLE_WALL) -- left
+	DrawRectangle(self.screen.x + self.screen.width, self.screen.y-1, self.screen.x + self.screen.width, self.screen.y + self.screen.height, Blocks.CASTLE_WALL) -- rigt
 	
 	-- Draw screen background
-	DrawRectangle(self.screen.topLeft.x, self.screen.topLeft.y, self.screen.bottomRight.x, self.screen.bottomRight.y, Blocks.WOODEN_BACK)
+	DrawRectangle(self.screen.x, self.screen.y, self.screen.x + self.screen.width - 1, self.screen.y + self.screen.height - 1, Blocks.WOODEN_BACK)
 	
 	-- Draw gamepad
-	DrawRectangle(self.gamepad.x-1, self.gamepad.y-1, self.gamepad.x + self.gamepad.width+1, self.gamepad.y + self.gamepad.height+1, Blocks.CASTLE_WALL)
-	DrawRectangle(self.gamepad.x, self.gamepad.y, self.gamepad.x + self.gamepad.width, self.gamepad.y + self.gamepad.height, Blocks.CASTLE_BACK)
+	DrawRectangle(self.gamepad.x-1, self.gamepad.y-1, self.gamepad.x + self.gamepad.width, self.gamepad.y + self.gamepad.height, Blocks.CASTLE_WALL)
+	DrawRectangle(self.gamepad.x, self.gamepad.y, self.gamepad.x + self.gamepad.width - 1, self.gamepad.y + self.gamepad.height - 1, Blocks.CASTLE_BACK)
+	
 	self.booted = true
 end
 
