@@ -1,13 +1,9 @@
-local LCS = require("class")
+local class = require("middleclass")
 
-Computer = LCS.class{
-	x = 0,
-	y = 0,
-	booted = false,
-	os = nil,
-}
-
-function Computer:init(x, y)
+Computer = class('Computer')
+function Computer:initialize(x, y)
+	self.booted = false
+	self.os = nil
 	self.x = x
 	self.y = y
 	
@@ -27,13 +23,13 @@ function Computer:init(x, y)
 		height = gamepadHeight,
 	}
 	self.gamepad.spawn = {
-		x = self.gamepad.x + 1.5,
-		y = self.gamepad.y + 1.5,
+		x = self.gamepad.x + 2,
+		y = self.gamepad.y + 2,
 	}
 end
 
 function Computer:Boot()
-	local fos = FOS()
+	local fos = FOS:new()
 	if (not fos) then
 		error("BSOD: Computer could not boot OS")
 		return
@@ -63,16 +59,50 @@ function Computer:Boot()
 		KAG.PushTile(self.gamepad.x, self.gamepad.y+y, Blocks.CASTLE_WALL)
 		KAG.PushTile(self.gamepad.x+self.gamepad.width+1, self.gamepad.y+y, Blocks.CASTLE_WALL)
 	end
-	
-	self.os:LoadGame("snake")
-	
 	self.booted = true
+	self.os:LoadGame("snake")
 end
 
 function Computer:SetOperatingSystem(ops)
 	self.os = ops
 	self.os:SetScreen(self.screen)
 	self.os:SetGamepad(self.gamepad)
+end
+
+function Computer:Hibernate()
+	if (self.os) then
+		self.os.player = nil
+		self.os.running = false
+	end
+end
+
+function Computer:WakeUp()
+	if (self.os) then
+		self.os.running = true
+	end
+end
+
+function Computer:SwitchPlayer(player)
+	-- Remove the player from other computers
+	if (player) then
+		for i=1,#COMPUTERS_LIST do
+			if (COMPUTERS_LIST[i].booted and COMPUTERS_LIST[i].os.player ~= nil and COMPUTERS_LIST[i].os.player:GetID() == player:GetID()) then
+				COMPUTERS_LIST[i]:Hibernate()
+			end
+		end
+	end
+	-- Set the new player in the OS
+	self.os.player = player
+	-- Change the status of the OS (running or not)
+	if (not player) then
+		self.os.running = false
+	else
+		self.os.running = true
+		-- Teleport the player to the gamepad
+		if (self.gamepad) then
+			self.os.player:ForcePosition(self.gamepad.spawn.x*8, self.gamepad.spawn.y*8)
+		end
+	end
 end
 
 function Computer:Update(ticks)
@@ -82,10 +112,11 @@ function Computer:Update(ticks)
 	self.os:Update(ticks)
 end
 
-FOS = LCS.class{
-	screen = nil,
-	gamepad = nil,
-	utils = {
+FOS = class('FOS')
+function FOS:initialize()
+	self.screen = nil
+	self.gamepad = nil
+	self.utils = {
 		los = function(x0,y0,x1,y1, callback)
 			local sx,sy,dx,dy
 
@@ -135,43 +166,12 @@ FOS = LCS.class{
 				end)
 					return points, result
 		end,
-	},
-	buffer = {},
-	bufferQueue = {},
-	player = nil,
-	running = true
-}
-
-function FOS:init()
-	KAG.CreateChatCommand("/point", cmd_Point)
-	KAG.CreateChatCommand("/clear", cmd_Clear)
-	KAG.CreateChatCommand("/pause", cmd_Pause)
-	KAG.CreateChatCommand("/player", cmd_SetPlayer)
-end
-function cmd_Point(player, message)
-	local args = string.split(message, " ")
-	if (args[2] and args[3] and args[4]) then
-		local x, y, b = tonumber(args[2]), tonumber(args[3]), tonumber(args[4])
-		COMPUTERS_LIST[1].os:DrawPoint(x, y, b)
-		player:SendMessage("Drawing point " .. b .. " at " .. x .. ":" .. y)
-	end
-end
-function cmd_Clear(player, message)
-	local args = string.split(message, " ")
-	local b = Blocks.WOODEN_BACK
-	COMPUTERS_LIST[1].os:Clear(b)
-	player:SendMessage("Clearing screen with block " .. b)
-end
-function cmd_Pause(player, message)
-	COMPUTERS_LIST[1].os.running = not COMPUTERS_LIST[1].os.running
-end
-function cmd_SetPlayer(player, message)
-	local args = string.split(message, " ")
-	if (args[2]) then
-		COMPUTERS_LIST[1].os:SwitchPlayer(KAG.GetPlayerByPartialName(args[2]))
-	else
-		COMPUTERS_LIST[1].os:SwitchPlayer(player)
-	end
+	}
+	self.buffer = {}
+	self.bufferQueue = {}
+	self.player = nil
+	self.tilesPerTick = 0
+	self.debug = false
 end
 
 function FOS:SetScreen(s)
@@ -187,18 +187,6 @@ end
 function FOS:SetGamepad(g)
 	print("SetGamepad")
 	self.gamepad = g
-end
-
-function FOS:SwitchPlayer(player)
-	print("SwitchPlayer")
-	if (not player) then
-		error("SwitchPlayer: player is nil")
-	end
-	self.player = player
-	
-	if (self.gamepad) then
-		self.player:ForcePosition(self.gamepad.spawn.x*8, self.gamepad.spawn.y*8)
-	end
 end
 
 function FOS:DrawLine(x1, y1, x2, y2, b)
@@ -252,6 +240,7 @@ end
 
 function FOS:Display()
 	-- TODO: optimize
+	self.tilesPerTick = 0
 	local newPixels = {}
 	for i=1,#self.bufferQueue do
 		local p = table.remove(self.bufferQueue, 1)
@@ -262,19 +251,24 @@ function FOS:Display()
 		for k2,v2 in pairs(v) do
 			if (self.buffer[k][k2] ~= newPixels[k][k2]) then
 				--print("Push tile " .. newPixels[k][k2] .. " at " .. k .. ":" .. k2)
+				self.tilesPerTick = self.tilesPerTick + 1
 				KAG.PushTile(self.screen.x+k, self.screen.y+k2, newPixels[k][k2])
 				self.buffer[k][k2] = newPixels[k][k2]
 			end
 		end
 	end
+	
+	if (self.debug) then print("Tiles per tick = " .. self.tilesPerTick) end
 end
 
+gameclass = nil
 function FOS:LoadGame(gameName)
-	self.game = dofile(Plugin.GetPath() .. "/data/games/" .. gameName .. "/init.lua")
+	if (not gameclass) then
+		print("LOADING CLASS")
+		gameclass = dofile(Plugin.GetPath() .. "/data/games/" .. gameName .. "/init.lua")
+	end
+	self.game = gameclass()
 	self.game:Load(self)
-	
-	--TODO: move this
-	self:SwitchPlayer(KAG.GetPlayerByName("master4523"))
 end
 
 function FOS:IsKeyDown(key)

@@ -1,26 +1,24 @@
-local LCS = require("class")
+local class = require("middleclass")
 
-Game = LCS.class{
-	os = nil,
-	
-	snake = {},
-	food = {x = 1, y = 1},
-	nextDir = 0,
-	spd = 0,
-	defaultSpeed = 12,
-	maxSpeed = 4,
-	isReady = false,
-	hi_name = "",
-	hi_score = 0,
-}
+local Game = class('Game')
+function Game:initialize()
+	self.os = nil
+	self.snake = {}
+	self.food = {x = 1, y = 1}
+	self.nextDir = 0
+	self.spd = 0
+	self.defaultSpeed = 12
+	self.maxSpeed = 5
+	self.isReady = false
+	self.hi_name = ""
+	self.hi_score = 0
+end
 
 function Game:Load(operatingSystem)
 	self.os = operatingSystem
 end
 
 function Game:Update(ticks)
-	--self.os:Clear(Blocks.WOODEN_BACK)
-	
 	if (not self.isReady) then
 		self:game_reset()
 		return
@@ -68,6 +66,7 @@ function Game:game_reset()
 		end
 		self.snake[k] = nil
 	end
+	table.insert(self.snake, {x = 2, y = math.ceil(self.os.screen.height/2), dir = 0})
 	table.insert(self.snake, {x = 1, y = math.ceil(self.os.screen.height/2), dir = 0})
 	
 	-- Create our snake
@@ -168,4 +167,4 @@ function Game:gen_food()
 	self.os:DrawPoint(self.food.x, self.food.y, 196)
 end
 
-return Game()
+return Game

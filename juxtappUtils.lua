@@ -346,10 +346,9 @@ function utils_OnServerTick(ticks)
 		end
 	end
 	if (#TILES_QUEUE > 0) then
-		for i=1,8 do
+		for i=1,16 do
 			local tile = table.remove(TILES_QUEUE, 1)
 			if (tile == nil) then
-				collectgarbage()
 				break
 			end
 			KAG.SetTile(tile.x*8, tile.y*8, tile.t)
