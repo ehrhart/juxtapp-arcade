@@ -111,10 +111,10 @@ function KAG.WholeMap(cb, chunkSize)
 	end
 end
 
--- @ KAG.PushTile(x, y, tile)
--- @ adds a <tile> to the queue, at <x>:<y> position
-function KAG.PushTile(x, y, tile)
-	table.insert(TILES_QUEUE, { x = x, y = y, t = tile })
+-- @ KAG.PushTile(x, y, tile, priority)
+-- @ adds a <tile> to the queue, at <x>:<y> position and with an optional priority
+function KAG.PushTile(x, y, tile, priority)
+	table.insert(TILES_QUEUE, { x = x, y = y, t = tile, p = priority or 0})
 end
 
 -- @ KAG.GetPlayerByPartialName(name)
@@ -346,6 +346,9 @@ function utils_OnServerTick(ticks)
 		end
 	end
 	if (#TILES_QUEUE > 0) then
+		table.sort(TILES_QUEUE, function(a, b)
+			return a.p > b.p
+		end)
 		for i=1,16 do
 			local tile = table.remove(TILES_QUEUE, 1)
 			if (tile == nil) then

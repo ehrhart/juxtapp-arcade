@@ -69,6 +69,19 @@ function OnInit()
 	KAG.CreateChatCommand("/login", cmd_Login)
 	KAG.CreateChatCommand("/logout", cmd_Logout)
 	KAG.CreateChatCommand("/debug", cmd_Debug)
+	KAG.CreateChatCommand("/load", cmd_Load)
+end
+
+function cmd_Load(player, message)
+	if (not player:HasFeature("view_rcon")) then return end
+	local args = string.split(message, " ")
+	if (args[2]) then
+		for i=1,#COMPUTERS_LIST do
+			if (COMPUTERS_LIST[i].os.player and COMPUTERS_LIST[i].os.player:GetID() == player:GetID()) then
+				COMPUTERS_LIST[i].os:LoadGame(args[2], true)
+			end
+		end
+	end
 end
 
 function cmd_Pause(player, message)

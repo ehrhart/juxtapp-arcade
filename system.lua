@@ -168,6 +168,7 @@ function FOS:initialize()
 		end,
 	}
 	self.buffer = {}
+	self.newBuffer = {}
 	self.bufferQueue = {}
 	self.player = nil
 	self.tilesPerTick = 0
@@ -195,9 +196,12 @@ function FOS:DrawLine(x1, y1, x2, y2, b)
 end
 
 function FOS:DrawRectangle(x1, y1, x2, y2, b)
-	for x=x1, x2 do
-		for y=y1, y2 do
-			table.insert(self.bufferQueue, {x=x,y=y,b=b})
+	for x=x1,x2 do
+		if (not self.newBuffer[x]) then self.newBuffer[x] = {} end
+		for y=y1,y2 do
+			if (self.buffer[x][y] ~= b) then
+				self.newBuffer[x][y] = b
+			end
 		end
 	end
 end
@@ -213,8 +217,9 @@ function FOS:DrawRectangleOutlined(x1, y1, x2, y2, b, b2)
 end
 
 function FOS:Clear(b)
-	for x=1,#self.buffer do
-		for y=1,#self.buffer[x] do
+	b = b or Blocks.WOODEN_BACK
+	for x=1,self.screen.width do
+		for y=1,self.screen.height do
 			if (self.buffer[x][y] ~= b) then
 				self:DrawPoint(x, y, b)
 				--print("Clearing " .. x .. ":" .. y)
@@ -224,12 +229,11 @@ function FOS:Clear(b)
 end
 
 function FOS:DrawPoint(x, y, b)
-	if (type(x) ~= "number") then error("(DrawPoint) x is not a number (" .. type(x) .. ")") end
-	if (type(y) ~= "number") then error("(DrawPoint) y is not a number (" .. type(y) .. ")") end
-	if (type(b) ~= "number") then error("(DrawPoint) b is not a number (" .. type(b) .. ")") end
-	--print("DrawPoint("..x..","..y..","..b..")")
 	if (not x or not y or not b) then return end
-	table.insert(self.bufferQueue, {x=x,y=y,b=b})
+	if (self.newBuffer[x][y] ~= b) then
+		self.newBuffer[x][y] = b
+	end
+	--table.insert(self.bufferQueue, {x=x,y=y,b=b})
 end
 
 function FOS:Update(ticks)
@@ -241,37 +245,37 @@ end
 function FOS:Display()
 	-- TODO: optimize
 	self.tilesPerTick = 0
-	local newPixels = {}
-	for i=1,#self.bufferQueue do
-		local p = table.remove(self.bufferQueue, 1)
-		if (not newPixels[p.x]) then newPixels[p.x] = {} end
-		newPixels[p.x][p.y] = p.b
-	end
-	for k,v in pairs(newPixels) do
-		for k2,v2 in pairs(v) do
-			if (self.buffer[k][k2] ~= newPixels[k][k2]) then
-				--print("Push tile " .. newPixels[k][k2] .. " at " .. k .. ":" .. k2)
-				self.tilesPerTick = self.tilesPerTick + 1
-				KAG.PushTile(self.screen.x+k, self.screen.y+k2, newPixels[k][k2])
-				self.buffer[k][k2] = newPixels[k][k2]
-			end
+	for x,v in pairs(self.newBuffer) do
+		for y,b in pairs(self.newBuffer[x]) do
+			self.tilesPerTick = self.tilesPerTick + 1
+			KAG.PushTile(self.screen.x+x, self.screen.y+y, b, 1000)
+			self.buffer[x][y] = b
 		end
 	end
-	
 	if (self.debug) then print("Tiles per tick = " .. self.tilesPerTick) end
 end
 
-gameclass = nil
-function FOS:LoadGame(gameName)
-	if (not gameclass) then
-		print("LOADING CLASS")
-		gameclass = dofile(Plugin.GetPath() .. "/data/games/" .. gameName .. "/init.lua")
+gameclasses = {}
+function FOS:LoadGame(gameName, forceReload)
+	if (type(forceReload) ~= "boolean") then forceReload = false end
+	if (not gameclasses[gameName] or forceReload) then
+		gameclasses[gameName] = dofile(Plugin.GetPath() .. "/data/games/" .. gameName .. "/init.lua")
 	end
-	self.game = gameclass()
+	self.game = gameclasses[gameName]()
 	self.game:Load(self)
 end
 
 function FOS:IsKeyDown(key)
 	if (not self.player) then return false end
 	return self.player:IsKeyDown(key)
+end
+
+function FOS:WasKeyPressed(key)
+	if (not self.player) then return false end
+	return self.player:WasKeyPressed(key)
+end
+
+function FOS:WasKeyReleased(key)
+	if (not self.player) then return false end
+	return self.player:WasKeyReleased(key)
 end
