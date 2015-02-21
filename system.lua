@@ -180,7 +180,7 @@ function FOS:SetScreen(s)
 	for x=1,self.screen.width do
 		self.buffer[x] = {}
 		for y=1,self.screen.height do
-			self.buffer[x][y] = Blocks.AIR
+			self.buffer[x][y] = KAG.GetTile((self.screen.x + x)*8, (self.screen.y + y)*8)
 		end
 	end
 end
@@ -197,9 +197,9 @@ end
 
 function FOS:DrawRectangle(x1, y1, x2, y2, b)
 	for x=x1,x2 do
-		if (not self.newBuffer[x]) then self.newBuffer[x] = {} end
 		for y=y1,y2 do
-			if (self.buffer[x][y] ~= b) then
+			self.newBuffer[x] = self.newBuffer[x] or {}
+			if (self.newBuffer[x][y] ~= b) then
 				self.newBuffer[x][y] = b
 			end
 		end
@@ -218,22 +218,20 @@ end
 
 function FOS:Clear(b)
 	b = b or Blocks.WOODEN_BACK
-	for x=1,self.screen.width do
-		for y=1,self.screen.height do
-			if (self.buffer[x][y] ~= b) then
-				self:DrawPoint(x, y, b)
-				--print("Clearing " .. x .. ":" .. y)
-			end
-		end
-	end
+	self:DrawRectangle(1,1,self.screen.width,self.screen.height,b)
+end
+
+function FOS:ClearArea(x1, y1, x2, y2, b)
+	b = b or Blocks.WOODEN_BACK
+	self:DrawRectangle(x1,y1,x2,y2,b)
 end
 
 function FOS:DrawPoint(x, y, b)
 	if (not x or not y or not b) then return end
+	self.newBuffer[x] = self.newBuffer[x] or {}
 	if (self.newBuffer[x][y] ~= b) then
 		self.newBuffer[x][y] = b
 	end
-	--table.insert(self.bufferQueue, {x=x,y=y,b=b})
 end
 
 function FOS:Update(ticks)
@@ -247,11 +245,14 @@ function FOS:Display()
 	self.tilesPerTick = 0
 	for x,v in pairs(self.newBuffer) do
 		for y,b in pairs(self.newBuffer[x]) do
-			self.tilesPerTick = self.tilesPerTick + 1
-			KAG.PushTile(self.screen.x+x, self.screen.y+y, b, 1000)
-			self.buffer[x][y] = b
+			if (self.buffer[x][y] ~= b) then
+				self.tilesPerTick = self.tilesPerTick + 1
+				KAG.PushTile(self.screen.x+x, self.screen.y+y, b, 1)
+				self.buffer[x][y] = b
+			end
 		end
 	end
+	self.newBuffer = {}
 	if (self.debug) then print("Tiles per tick = " .. self.tilesPerTick) end
 end
 

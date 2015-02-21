@@ -70,10 +70,15 @@ function OnInit()
 	KAG.CreateChatCommand("/logout", cmd_Logout)
 	KAG.CreateChatCommand("/debug", cmd_Debug)
 	KAG.CreateChatCommand("/load", cmd_Load)
+	KAG.CreateChatCommand("/games", cmd_Games)
+end
+
+function cmd_Games(player, message)
+	player:SendMessage("Games available: snake, tetris")
 end
 
 function cmd_Load(player, message)
-	if (not player:HasFeature("view_rcon")) then return end
+	--if (not player:HasFeature("view_rcon")) then return end
 	local args = string.split(message, " ")
 	if (args[2]) then
 		for i=1,#COMPUTERS_LIST do

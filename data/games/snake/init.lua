@@ -13,6 +13,7 @@ function Game:initialize()
 	self.x = 1
 	self.y = 1
 	self.queue = {}
+	self.queueSize = 0
 	self.currentDir = 0
 	self.skipTail = false
 	self.score = 0
@@ -21,6 +22,9 @@ end
 
 function Game:Load(operatingSystem)
 	self.os = operatingSystem
+	if (self.os.player) then
+		self.os.player:SendMessage("Rules: press the movement keys (default: W, A, S, D) to move the snake, and collect the food without touching the border of the screen or the tail of the snake")
+	end
 end
 
 function Game:Update(ticks)
@@ -58,6 +62,7 @@ function Game:game_reset()
 	self.currentDir = 0
 	self.skipTail = false
 	self.queue = {}
+	self.queueSize = 0
 	self.x = 2
 	self.y = math.ceil(self.os.screen.height/2)
 	self.spd = self.defaultSpeed
@@ -70,7 +75,7 @@ end
 function Game:game_over()
 	self.isReady = false
 	if (self.score > 1) then
-		KAG.SendMessage(self.os.player:GetName() .. "'s Score: " .. self.score)
+		KAG.SendMessage(self.os.player:GetName() .. "'s Snake Score: " .. self.score)
 	end
 	self:game_reset()
 end
@@ -80,7 +85,10 @@ function Game:game_update()
 		self.skipTail = false
 	else
 		local tail = table.remove(self.queue, 1)
-		if (tail ~= nil) then self.os:DrawPoint(tail.x, tail.y, Blocks.WOODEN_BACK) end
+		if (tail ~= nil) then
+			self.os:DrawPoint(tail.x, tail.y, Blocks.WOODEN_BACK)
+			self.queueSize = self.queueSize - 1
+		end
 	end
 	
 	self.currentDir = self.nextDir
@@ -100,7 +108,8 @@ function Game:game_update()
 	end
 	
 	self.os:DrawPoint(self.x, self.y, self.SNAKE_BLOCK)
-	table.insert(self.queue, {x=self.x, y=self.y})
+	self.queue[self.queueSize+1] = {x=self.x, y=self.y}
+	self.queueSize = self.queueSize + 1
 	
 	if(self.x == self.food.x and self.y == self.food.y) then
 		if(self.spd > self.maxSpeed) then

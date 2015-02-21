@@ -10,8 +10,9 @@ function Game:initialize()
 	self.ny = 16
 	self.nu = 5
 	
-	self.dx = 1
-	self.dy = 1
+	self.xoff = 0 -- xoffset
+	self.yoff = 0 -- yoffset
+	
 	self.blocks = {}
 	self.actions = {}
 	self.playing = true
@@ -22,13 +23,13 @@ function Game:initialize()
 	self.rows = {}
 	self.step = 1
 	
-	self.i = { size = 2, blocks = {0x0F00, 0x2222, 0x00F0, 0x4444} }
-	self.j = { size = 3, blocks = {0x44C0, 0x8E00, 0x6440, 0x0E20} }
-	self.l = { size = 3, blocks = {0x4460, 0x0E80, 0xC440, 0x2E00} }
-	self.o = { size = 2, blocks = {0xCC00, 0xCC00, 0xCC00, 0xCC00} }
-	self.s = { size = 3, blocks = {0x06C0, 0x8C40, 0x6C00, 0x4620} }
-	self.t = { size = 3, blocks = {0x0E40, 0x4C40, 0x4E00, 0x4640} }
-	self.z = { size = 3, blocks = {0x0C60, 0x4C80, 0xC600, 0x2640} }
+	self.i = { id="i", size = 4, blocks = {0x0F00, 0x2222, 0x00F0, 0x4444} }
+	self.j = { id="j", size = 3, blocks = {0x44C0, 0x8E00, 0x6440, 0x0E20} }
+	self.l = { id="l", size = 3, blocks = {0x4460, 0x0E80, 0xC440, 0x2E00} }
+	self.o = { id="o", size = 2, blocks = {0xCC00, 0xCC00, 0xCC00, 0xCC00} }
+	self.s = { id="s", size = 3, blocks = {0x06C0, 0x8C40, 0x6C00, 0x4620} }
+	self.t = { id="t", size = 3, blocks = {0x0E40, 0x4C40, 0x4E00, 0x4640} }
+	self.z = { id="z", size = 3, blocks = {0x0C60, 0x4C80, 0xC600, 0x2640} }
 	
 	self.pieces = {}
 	self.invalid = {}
@@ -36,25 +37,30 @@ end
 
 function Game:Load(operatingSystem)
 	self.os = operatingSystem
+	if (self.os.player) then
+		self.os.player:SendMessage("Rules: press the movement keys (default: W, A, S, D) to move the blocks, and fill as many lines as possible")
+	end
 	
-	print("Game:Load, calling self:reset()")
+	self.xoff = math.floor((self.os.screen.width / 2) - (self.nx / 2))
+	self.yoff = 0  -- yoffset
+	
 	self:reset()
 end
 
 function Game:Update(ticks)
-	local kUp = self.os:IsKeyDown(Keys.UP)
-	local kDown = self.os:IsKeyDown(Keys.DOWN)
-	local kLeft = self.os:IsKeyDown(Keys.LEFT)
-	local kRight = self.os:IsKeyDown(Keys.RIGHT)
+	if (self.os:WasKeyPressed(Keys.UP)) then table.insert(self.actions, self.DIR.UP) end
+	if (self.os:WasKeyPressed(Keys.DOWN)) then table.insert(self.actions, self.DIR.DOWN) end
+	if (self.os:WasKeyPressed(Keys.LEFT)) then table.insert(self.actions, self.DIR.LEFT) end
+	if (self.os:WasKeyPressed(Keys.RIGHT)) then table.insert(self.actions, self.DIR.RIGHT) end
 	
 	self:handle(table.remove(self.actions, 1))
 	
-	if (ticks % 30 == 0) then
+	if (ticks % 20 == 0) then
 		-- update
 		self:drop()
-		
+	end
+	if (ticks % 5 == 0) then
 		--draw
-		self.os:Clear()
 		self:drawCourt()
 		self:drawNext()
 		self.os:Display()
@@ -112,11 +118,11 @@ function Game:drop()
 end
 
 function Game:lose()
+	KAG.SendMessage(self.os.player:GetName() .. "'s Tetris Score: " .. self.score)
 	self:reset()
 end
 
 function Game:dropPiece()
-	print("Game:dropPiece (" .. self.current.x .. ":" .. self.current.y .. ")")
 	self:eachBlock(self.current.type, self.current.x, self.current.y, self.current.dir, function(x, y)
 		self:setBlock(x, y, self.current.type)
 	end)
@@ -125,11 +131,11 @@ end
 function Game:removeLines()
 	local complete = false
 	local n = 0
-	local y = self.ny
+	local y = self.ny + 1
 	while (y > 1) do
 		y = y - 1
 		complete = true
-		local x = 1
+		local x = 0
 		while (x < self.nx) do
 			x = x + 1
 			if (not self:getBlock(x, y)) then
@@ -149,13 +155,13 @@ function Game:removeLines()
 end
 
 function Game:removeLine(n)
-	local y = n
+	local y = n + 1
 	while (y >= 1) do
 		y = y - 1
-		local x = 1
+		local x = 0
 		while (x < self.nx) do
 			x = x + 1
-			self:setBlock(x, y, (y == 0) and nil or self:getBlock(x, y-1))
+			self:setBlock(x, y, (y == 1) and nil or self:getBlock(x, y-1))
 		end
 	end
 end
@@ -178,6 +184,7 @@ end
 
 function Game:drawCourt()
 	if (self.invalid.court) then
+		self.os:ClearArea(self.xoff + 1, self.yoff + 1, self.xoff + self.nx, self.yoff + self.ny)
 		self:drawPiece(self.current.type, self.current.x, self.current.y, self.current.dir)
 		local x, y, block
 		for y=1,self.ny do
@@ -194,21 +201,20 @@ end
 
 function Game:drawNext()
 	if (self.invalid.next) then
-		self.padding = (self.nu - self.next.type.size) / 2
-		self:drawPiece(self.next.type, 20, 5, self.next.dir)--self.padding, self.padding, self.next.dir)
+		self.os:ClearArea(self.xoff + self.nx + 2, self.yoff + 1, self.os.screen.width, self.yoff + self.ny)
+		self:drawPiece(self.next.type, self.xoff + 2, self.yoff + 2, self.next.dir)
 		self.invalid.next = false
 	end
 end
 
 function Game:drawPiece(t, x, y, dir)
-	print("Game:drawPiece (" .. x .. ":" .. y .. ")")
 	self:eachBlock(t, x, y, dir, function(x, y)
 		self:drawBlock(x, y)
 	end)
 end
 
 function Game:drawBlock(x, y)
-	self.os:DrawPoint(x, y, Blocks.GOLD)
+	self.os:DrawPoint(self.xoff + x, self.yoff + y, Blocks.GOLD)
 end
 
 function Game:setRows(n)
@@ -258,7 +264,6 @@ end
 
 function Game:setCurrentPiece(piece)
 	self.current = piece or self:randomPiece()
-	print("SET CURRENT PIECE TO " .. self.current.x .. ":" .. self.current.y)
 	self:invalidate()
 end
 
@@ -274,17 +279,23 @@ function Game:reset()
 	self:clearBlocks()
 	self:clearRows()
 	self:clearScore()
-	self:setCurrentPiece(self:randomPiece())
+	self:setCurrentPiece()
 	self:setNextPiece()
+	
+	self.os:Clear()
+	
+	-- draw border
+	self.os:DrawRectangle(self.xoff, self.yoff + 1, self.xoff, self.yoff + self.ny, Blocks.CASTLE_WALL)
+	self.os:DrawRectangle(self.xoff + self.nx + 1, self.yoff + 1, self.xoff + self.nx + 1, self.yoff + self.ny, Blocks.CASTLE_WALL)
 end
 
 function Game:eachBlock(t, x, y, dir, fn)
-	local row = 1
-	local col = 1
+	local row = 0
+	local col = 0
 	local blocks = t.blocks[dir+1]
-	local b = 0x8000
-	while(b > 0) do
-		if (bit32.band(blocks, b)) then
+	local bit = 0x8000
+	while(bit > 0) do
+		if (bit32.band(blocks, bit) ~= 0) then
 			fn(x + col, y + row)
 		end
 		col = col + 1
@@ -292,14 +303,14 @@ function Game:eachBlock(t, x, y, dir, fn)
 			col = 0
 			row = row + 1
 		end
-		b = bit32.arshift(b, 1)
+		bit = bit32.arshift(bit, 1)
 	end
 end
 
 function Game:occupied(t, x, y, dir)
 	local result = false
 	self:eachBlock(t, x, y, dir, function(x, y)
-		if ((x < 1) or (x >= self.nx) or (y < 1) or (y >= self.ny) or self:getBlock(x,y)) then
+		if ((x < 1) or (x > self.nx) or (y < 1) or (y > self.ny) or self:getBlock(x,y)) then
 			result = true
 		end
 	end)
@@ -310,32 +321,11 @@ function Game:unoccupied(t, x, y, dir)
 	return not self:occupied(t, x, y, dir)
 end
 
-function Game:table_splice(tbl, start, length)
-   length = length or 1
-   start = start or 1
-   local endd = start + length
-   local spliced = {}
-   local remainder = {}
-   for i,elt in ipairs(tbl) do
-      if i < start or i >= endd then
-         table.insert(spliced, elt)
-      else
-         table.insert(remainder, elt)
-      end
-   end
-   return spliced, remainder
-end
-
 function Game:randomPiece()
 	if (#self.pieces == 0) then
 		self.pieces = {self.i,self.i,self.i,self.i,self.j,self.j,self.j,self.j,self.l,self.l,self.l,self.l,self.o,self.o,self.o,self.o,self.s,self.s,self.s,self.s,self.t,self.t,self.t,self.t,self.z,self.z,self.z,self.z}
 	end
-	local t = self:table_splice(self.pieces, math.random(1, #self.pieces), 1)[1]
-	for k,v in pairs(t) do
-		print("---")
-		print(v)
-		print("---")
-	end
+	local t = self.pieces[math.random(1, #self.pieces)]
 	return { type = t, dir = self.DIR.UP, x = math.floor(math.random(1, self.nx - t.size)), y = 1 }
 end
 
