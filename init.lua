@@ -44,7 +44,7 @@ end
 
 function AddComputer(x, y)
 	local c = Computer:new(x, y)
-	table.insert(COMPUTERS_LIST, c)
+	COMPUTERS_LIST[#COMPUTERS_LIST+1] = c
 	c:Boot()
 end
 
@@ -74,7 +74,7 @@ function OnInit()
 end
 
 function cmd_Games(player, message)
-	player:SendMessage("Games available: snake, tetris")
+	player:SendMessage("Games available: snake, tetris, pong")
 end
 
 function cmd_Load(player, message)

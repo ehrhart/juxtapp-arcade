@@ -97,6 +97,7 @@ function Computer:SwitchPlayer(player)
 	if (not player) then
 		self.os.running = false
 	else
+		self.os:LoadGame("snake")
 		self.os.running = true
 		-- Teleport the player to the gamepad
 		if (self.gamepad) then

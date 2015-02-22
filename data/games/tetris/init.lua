@@ -5,7 +5,7 @@ function Game:initialize()
 	self.os = nil
 	
 	self.DIR = { UP = 0, RIGHT = 1, DOWN = 2, LEFT = 3, MIN = 0, MAX = 3 }
-	self.speed = { start = 0.6, decrement = 0.005, min = 0.1 }
+	self.speed = { start = 0.7, decrement = 0.008, min = 0.4 }
 	self.nx = 10
 	self.ny = 16
 	self.nu = 5
@@ -20,8 +20,8 @@ function Game:initialize()
 	self.next = nil
 	self.score = 0
 	self.vscore = 0
-	self.rows = {}
-	self.step = 1
+	self.rows = 0
+	self.step = 21
 	
 	self.i = { id="i", size = 4, blocks = {0x0F00, 0x2222, 0x00F0, 0x4444} }
 	self.j = { id="j", size = 3, blocks = {0x44C0, 0x8E00, 0x6440, 0x0E20} }
@@ -55,7 +55,7 @@ function Game:Update(ticks)
 	
 	self:handle(table.remove(self.actions, 1))
 	
-	if (ticks % 20 == 0) then
+	if (ticks % self.step == 0) then
 		-- update
 		self:drop()
 	end
@@ -219,7 +219,7 @@ end
 
 function Game:setRows(n)
 	self.rows = n
-	self.step = math.max(self.speed.min, self.speed.start - (self.speed.decrement*self.rows))
+	self.step = math.ceil(30 * math.max(self.speed.min, self.speed.start - (self.speed.decrement*self.rows)))
 	self:invalidateRows()
 end
 
@@ -323,7 +323,7 @@ end
 
 function Game:randomPiece()
 	if (#self.pieces == 0) then
-		self.pieces = {self.i,self.i,self.i,self.i,self.j,self.j,self.j,self.j,self.l,self.l,self.l,self.l,self.o,self.o,self.o,self.o,self.s,self.s,self.s,self.s,self.t,self.t,self.t,self.t,self.z,self.z,self.z,self.z}
+		self.pieces = {self.i, self.j, self.l, self.o, self.s, self.t, self.z}
 	end
 	local t = self.pieces[math.random(1, #self.pieces)]
 	return { type = t, dir = self.DIR.UP, x = math.floor(math.random(1, self.nx - t.size)), y = 1 }

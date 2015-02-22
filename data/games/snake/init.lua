@@ -125,14 +125,24 @@ function Game:game_update()
 end
 
 function Game:gen_food()
-	local a = false
-	while a == false do
-		self.food.x = math.random(1, self.os.screen.width)
-		self.food.y = math.random(1, self.os.screen.height)
-		local b = self.os.buffer[self.food.x][self.food.y]
-		a = (b ~= self.SNAKE_BLOCK and b ~= Blocks.CASTLE_WALL)
+	local foodGrid = {}
+	for x=1,self.os.screen.width do
+		for y=1,self.os.screen.height do
+			local b = self.os.buffer[x][y]
+			if (b ~= self.SNAKE_BLOCK and x ~= self.food.x and y ~= self.food.y) then
+				foodGrid[#foodGrid+1] = {x = x, y = y}
+			end
+		end
 	end
-	self.os:DrawPoint(self.food.x, self.food.y, 196)
+	if (#foodGrid == 0) then
+		-- No more tiles available, gg
+		self:game_over()
+	else
+		local f = foodGrid[math.random(1, #foodGrid)]
+		self.food.x = f.x
+		self.food.y = f.y
+		self.os:DrawPoint(self.food.x, self.food.y, 196)
+	end
 end
 
 return Game
