@@ -41,8 +41,8 @@ function Game:Update(ticks)
 		--self.tick = self.tick - 1
 		--if (speed == 0 or self.tick ~= 1) then return end --TODO: check if it's correct
 		--self.tick = self.speed
-		self.ball.x = self.ball.x + self.ball.dx
-		self.ball.y = self.ball.y + self.ball.dy
+		self.ball.x = self:clamp(self.ball.x + self.ball.dx, 1, self.os.screen.width)
+		self.ball.y = self:clamp(self.ball.y + self.ball.dy, 1, self.os.screen.height)
 		if (self.ball.dx < 1) then
 			local x = self.ball.x
 			local dx = self.ball.dx
@@ -61,10 +61,29 @@ function Game:Update(ticks)
 		end
 		if ((self.ball.x == 3 and self:bw(self.ball.y, self.pl.y-1, self.pl.y + self.pl.my)) or (self.ball.x == (self.os.screen.width - 2) and self:bw(self.ball.y, self.pr.y-1, self.pr.y + self.pr.my))) then
 			self.ball.dx = -self.ball.dx
+			
+			-- Solo score, increments everytime the ball bounces on the paddle
+			if (self.ball.x > 3) then
+				self.score[2] = self.score[2] + 1
+			end
+			
+			if (math.random() > 0.5) then self.ball.dy = -self.ball.dy end
 			self:speedup()
 		elseif ((self.ball.x == 1) or (self.ball.x == self.os.screen.width)) then
-			local score_index = self.ball.x > 1 and 1 or 2
-			self.score[score_index] = self.score[score_index] + 1
+			-- Multi score
+			--local score_index = self.ball.x == 3 and 1 or 2
+			--self.score[score_index] = self.score[score_index] + 1
+			
+			-- Solo score
+			if (self.os.player) then
+				local msg = self.os.player:GetName() .. "'s Pong Score: " .. self.score[2]
+				if (self.score[2] > 10) then
+					KAG.SendMessage(msg)
+				elseif (self.score[2] > 1) then
+					self.os.player:SendMessage(msg)
+				end
+			end
+			
 			self:reset()
 		end
 		
@@ -121,6 +140,7 @@ function Game:reset()
 		dx = (math.random() > 0.5 and 1 or -1),
 		dy = (math.random() > 0.5 and 1 or -1)
 	}
+	self.score = {0, 0}
 	
 	self.os:Clear()
 end
